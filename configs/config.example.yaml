@@ -1,0 +1,28 @@
+# Basic settings
+listen_port: 6881
+download_dir: "/home/user/Downloads/zbittorrent"
+
+# Feature flags
+enable_dht: false
+enable_pex: false
+
+# Rate limits
+upload_rate_limit: 1000000
+download_rate_limit: 1000000
+
+# Logging
+log:
+  format: "text"
+  level: "info"
+
+# Tracker
+tracker:
+  timeout: 30       # seconds
+  max_retries: 3
+  min_interval: 300 # minimum seconds between tracker requests
+
+# Peer
+peer:
+  max_connections: 50
+  timeout: 10        # connection timeout in seconds
+  keepalive: 120
