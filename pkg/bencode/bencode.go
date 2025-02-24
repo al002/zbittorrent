@@ -3,7 +3,14 @@ package bencode
 import "bytes"
 
 func Marshal(v interface{}) ([]byte, error) {
-  return nil, nil
+  var buf bytes.Buffer
+  e := Encoder{w: &buf}
+  err := e.Encode(v)
+  if err != nil {
+    return nil, err
+  }
+
+  return buf.Bytes(), nil
 }
 
 func Unmarshal(data []byte, v interface{}) (err error) {

@@ -6,11 +6,11 @@ import (
 )
 
 // float32/float64 has no bencode representation
-type MashalTypeError struct {
+type MarshalTypeError struct {
 	Type reflect.Type
 }
 
-func (e *MashalTypeError) Error() string {
+func (e *MarshalTypeError) Error() string {
 	return fmt.Sprintf("bencode: unsupported type: %s", e.Type.String())
 }
 
