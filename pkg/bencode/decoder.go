@@ -60,6 +60,15 @@ func (d *Decoder) parseValue(v reflect.Value) (bool, error) {
 		v = v.Elem()
 	}
 
+	ok, err := d.parseUnmarshaler(v)
+
+	if err != nil {
+		return false, err
+	}
+	if ok {
+		return true, nil
+	}
+
 	if v.Kind() == reflect.Interface && v.NumMethod() == 0 {
 		iface, ok, err := d.parseValueInterface()
 		if err != nil {
@@ -95,6 +104,108 @@ func (d *Decoder) parseValue(v reflect.Value) (bool, error) {
 
 		return false, d.unknowValueType(b, d.Offset-1)
 	}
+}
+
+func (d *Decoder) parseUnmarshaler(v reflect.Value) (bool, error) {
+	if !v.Type().Implements(unmarshalerType) {
+		if v.Addr().Type().Implements(unmarshalerType) {
+			v = v.Addr()
+		} else {
+			return false, nil
+		}
+	}
+	d.buf.Reset()
+	ok, err := d.readOneValue()
+
+	if err != nil {
+		return false, err
+	}
+
+	if !ok {
+		return false, nil
+	}
+
+	m := v.Interface().(Unmarshaler)
+	err = m.UnmarshalBencode(d.buf.Bytes())
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (d *Decoder) readOneValue() (bool, error) {
+	b, err := d.r.ReadByte()
+
+	if err != nil {
+		return false, err
+	}
+
+	if b == 'e' {
+		err := d.r.UnreadByte()
+
+		if err != nil {
+			return false, err
+		}
+
+		return false, nil
+	} else {
+		d.Offset++
+		d.buf.WriteByte(b)
+	}
+
+	switch b {
+	case 'd', 'l':
+		// read until there is nothing to read
+		for {
+			ok, err := d.readOneValue()
+			if err != nil {
+				return false, err
+			}
+			if !ok {
+				break
+			}
+		}
+		// consume 'e' as well
+		b, err = d.readByte()
+		if err != nil {
+			return false, err
+		}
+		d.buf.WriteByte(b)
+	case 'i':
+		if err := d.readUntil('e'); err != nil {
+			return false, err
+		}
+		d.buf.WriteString("e")
+	default:
+		if b >= '0' && b <= '9' {
+			start := d.buf.Len() - 1
+
+			if err := d.readUntil(':'); err != nil {
+				return false, err
+			}
+
+			length, err := strconv.ParseInt(bytesAsString(d.buf.Bytes()[start:]), 10, 64)
+
+			if err := checkForIntParseError(err, d.Offset-1); err != nil {
+				return false, err
+			}
+
+			d.buf.WriteString(":")
+			n, err := io.CopyN(&d.buf, d.r, length)
+			d.Offset += n
+
+			if err != nil {
+				return false, checkForUnexpectedEOF(err, d.Offset)
+			}
+			break
+		}
+
+		return false, d.unknowValueType(b, d.Offset-1)
+	}
+
+	return true, nil
 }
 
 func (d *Decoder) parseInt(v reflect.Value) error {
@@ -411,7 +522,7 @@ func (d *Decoder) parseDict(v reflect.Value) error {
 			return fmt.Errorf("parsing bencode dict into %v: %w", v.Type(), err)
 		}
 
-		if df.Type != nil {
+		if df.Type == nil {
 			_, ok, err = d.parseValueInterface()
 			if err != nil {
 				return err
@@ -718,21 +829,21 @@ func (d *Decoder) parseDictInterface() (interface{}, error) {
 }
 
 func (d *Decoder) ReadEOF() error {
-  _, err := d.r.ReadByte()
-  if err == nil {
-    err := d.r.UnreadByte()
-    if err != nil {
-      return err
-    }
+	_, err := d.r.ReadByte()
+	if err == nil {
+		err := d.r.UnreadByte()
+		if err != nil {
+			return err
+		}
 
-    return errors.New("expected EOF")
-  }
+		return errors.New("expected EOF")
+	}
 
-  if err == io.EOF {
-    return nil
-  }
+	if err == io.EOF {
+		return nil
+	}
 
-  return fmt.Errorf("expected EOF, got %w", err)
+	return fmt.Errorf("expected EOF, got %w", err)
 }
 
 func checkForIntParseError(err error, offset int64) error {

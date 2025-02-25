@@ -9,6 +9,9 @@ run: build
 validate: build
 	./bin/zbittorrent validate --config configs/config.yaml
 
+info: build
+	./bin/zbittorrent info --config configs/config.yaml $(P)
+
 clean:
 	rm -r bin/
 

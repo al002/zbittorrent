@@ -42,6 +42,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.zbittorrent/config.yaml)")
 
   rootCmd.AddCommand(validateCmd)
+  rootCmd.AddCommand(infoCmd)
 }
 
 func initConfig() {

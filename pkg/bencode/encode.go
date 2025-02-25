@@ -13,6 +13,10 @@ type Encoder struct {
 	w io.Writer
 }
 
+func NewEncoder(w io.Writer) *Encoder {
+	return &Encoder{w: w}
+}
+
 func (e *Encoder) Encode(v interface{}) error {
 	if v == nil {
 		return nil
