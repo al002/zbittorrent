@@ -5,16 +5,12 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"os"
+	"strconv"
 
 	"github.com/al002/zbittorrent/pkg/bencode"
 )
-
-type AnnounceList [][]string
-
-type Node string
-
-type UrlList []string
 
 type MetaInfo struct {
 	Announce     string        `bencode:"announce,omitempty"`
@@ -51,7 +47,7 @@ func (mi *MetaInfo) Marshal(w io.Writer) error {
 }
 
 func (mi *MetaInfo) ConvertToAnnounceList() AnnounceList {
-	if shouldOverrideAnnounce(mi.Announce, mi.AnnounceList) {
+	if mi.AnnounceList.shouldOverrideAnnounce(mi.Announce) {
 		return mi.AnnounceList
 	}
 
@@ -60,32 +56,6 @@ func (mi *MetaInfo) ConvertToAnnounceList() AnnounceList {
 	}
 
 	return nil
-}
-
-func (mi *MetaInfo) DistinctAnnounceList() (ret []string) {
-	exists := make(map[string]struct{})
-
-	for _, tier := range mi.AnnounceList {
-		for _, v := range tier {
-			if _, ok := exists[v]; !ok {
-				exists[v] = struct{}{}
-				ret = append(ret, v)
-			}
-		}
-	}
-
-  return
-}
-
-func shouldOverrideAnnounce(announce string, list AnnounceList) bool {
-	for _, tier := range list {
-		for _, url := range tier {
-			if url != "" || announce == "" {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func Load(r io.Reader) (*MetaInfo, error) {
@@ -115,4 +85,88 @@ func LoadFromFile(filename string) (*MetaInfo, error) {
 	var buf bufio.Reader
 	buf.Reset(f)
 	return Load(&buf)
+}
+
+type AnnounceList [][]string
+
+func (al AnnounceList) DistinctAnnounceList() (ret []string) {
+	exists := make(map[string]struct{})
+
+	for _, tier := range al {
+		for _, v := range tier {
+			if _, ok := exists[v]; !ok {
+				exists[v] = struct{}{}
+				ret = append(ret, v)
+			}
+		}
+	}
+
+	return
+}
+
+func (al AnnounceList) shouldOverrideAnnounce(announce string) bool {
+	for _, tier := range al {
+		for _, url := range tier {
+			if url != "" || announce == "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+type Node string
+
+var _ bencode.Unmarshaler = (*Node)(nil)
+
+func (n *Node) UnmarshalBencode(b []byte) (err error) {
+	var iface interface{}
+	err = bencode.Unmarshal(b, &iface)
+
+	if err != nil {
+		return
+	}
+
+	switch v := iface.(type) {
+	case string:
+		*n = Node(v)
+	case []interface{}:
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil {
+					err = r.(error)
+				}
+			}()
+			*n = Node(
+				net.JoinHostPort(v[0].(string), strconv.FormatInt(v[1].(int64), 10)),
+			)
+		}()
+	default:
+		err = fmt.Errorf("unsupported type: %T", iface)
+	}
+
+	return
+}
+
+type UrlList []string
+
+var _ bencode.Unmarshaler = (*UrlList)(nil)
+
+func (me *UrlList) UnmarshalBencode(b []byte) error {
+	if len(b) == 0 {
+		return nil
+	}
+
+	if b[0] == 'l' {
+		var l []string
+		err := bencode.Unmarshal(b, &l)
+		*me = l
+		return err
+	}
+
+	var s string
+	err := bencode.Unmarshal(b, &s)
+	*me = []string{s}
+	return err
 }
