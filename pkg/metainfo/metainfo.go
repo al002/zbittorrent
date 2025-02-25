@@ -50,6 +50,44 @@ func (mi *MetaInfo) Marshal(w io.Writer) error {
 	return bencode.NewEncoder(w).Encode(mi)
 }
 
+func (mi *MetaInfo) ConvertToAnnounceList() AnnounceList {
+	if shouldOverrideAnnounce(mi.Announce, mi.AnnounceList) {
+		return mi.AnnounceList
+	}
+
+	if mi.Announce != "" {
+		return [][]string{{mi.Announce}}
+	}
+
+	return nil
+}
+
+func (mi *MetaInfo) DistinctAnnounceList() (ret []string) {
+	exists := make(map[string]struct{})
+
+	for _, tier := range mi.AnnounceList {
+		for _, v := range tier {
+			if _, ok := exists[v]; !ok {
+				exists[v] = struct{}{}
+				ret = append(ret, v)
+			}
+		}
+	}
+
+  return
+}
+
+func shouldOverrideAnnounce(announce string, list AnnounceList) bool {
+	for _, tier := range list {
+		for _, url := range tier {
+			if url != "" || announce == "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func Load(r io.Reader) (*MetaInfo, error) {
 	var mi MetaInfo
 	d := bencode.NewDecoder(r)
