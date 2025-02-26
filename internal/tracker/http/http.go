@@ -74,7 +74,7 @@ func (cl Client) Announce(ctx context.Context, req trackerTypes.AnnounceRequest,
 	err = bencode.Unmarshal(buf.Bytes(), &httpResponse)
 	if _, ok := err.(bencode.ErrUnusedTrailingBytes); ok {
 		err = nil
-	} else {
+	} else if err != nil {
 		err = fmt.Errorf("error decoding %q: %s", buf.Bytes(), err)
 		return
 	}

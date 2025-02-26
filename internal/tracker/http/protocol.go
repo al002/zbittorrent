@@ -21,7 +21,7 @@ type Peers struct {
 	Compact bool
 }
 
-func (p Peers) UnmarshalBencode(b []byte) (err error) {
+func (p *Peers) UnmarshalBencode(b []byte) (err error) {
 	var _v interface{}
 	err = bencode.Unmarshal(b, &_v)
 
@@ -30,7 +30,7 @@ func (p Peers) UnmarshalBencode(b []byte) (err error) {
 	}
 
 	switch v := _v.(type) {
-	// BEP 23 compact
+  // BEP 23 compact
 	case string:
 		var cnas krpc.CompactIPv4NodeAddrs
 		err = cnas.UnmarshalBinary([]byte(v))
@@ -46,13 +46,13 @@ func (p Peers) UnmarshalBencode(b []byte) (err error) {
 			})
 		}
 		return
-		// BEP 3 non-compact
+  // BEP 3 non-compact
 	case []interface{}:
 		p.Compact = false
 		for _, i := range v {
-			var _p Peer
-			_p.FromDictInterface(i.(map[string]interface{}))
-			p.List = append(p.List, _p)
+			var pp Peer
+			pp.FromDictInterface(i.(map[string]interface{}))
+			p.List = append(p.List, pp)
 		}
 		return
 	default:
