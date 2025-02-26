@@ -27,5 +27,5 @@ func (info *Info) isDir() bool {
 }
 
 func (info *Info) NumOfPieces() int {
-  return len(info.Pieces) / 20
+	return len(info.Pieces) / 20
 }
