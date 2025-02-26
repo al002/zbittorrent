@@ -31,6 +31,7 @@ type Stats struct {
 }
 
 type Torrent struct {
+  Trackers [][]string // The tiered tracker URIs
 	Name        string
 	InfoHash    metainfo.Hash
 	MetaInfo    *metainfo.MetaInfo
@@ -57,6 +58,7 @@ func NewTorrentFromFile(filename string) (*Torrent, error) {
 	}
 
 	return &Torrent{
+    Trackers: mi.ConvertToAnnounceList(),
 		Name:     info.FinalName(),
 		InfoHash: mi.HashInfoBytes(),
 		MetaInfo: mi,
