@@ -35,7 +35,7 @@ type AnnounceOpt struct {
 func (cl Client) Announce(ctx context.Context, req trackerTypes.AnnounceRequest, opt AnnounceOpt) (ret AnnounceResponse, err error) {
 	_url := utils.CopyURL(cl.url_)
 
-	setAnnounceParams(_url, &req)
+	setAnnounceParams(_url, &req, opt)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, _url.String(), nil)
 	if err != nil {
@@ -92,7 +92,7 @@ func (cl Client) Announce(ctx context.Context, req trackerTypes.AnnounceRequest,
 	return
 }
 
-func setAnnounceParams(_url *url.URL, req *trackerTypes.AnnounceRequest) {
+func setAnnounceParams(_url *url.URL, req *trackerTypes.AnnounceRequest, opt AnnounceOpt) {
 	q := url.Values{}
 
 	q.Set("key", strconv.FormatInt(int64(req.Key), 10))
@@ -115,7 +115,18 @@ func setAnnounceParams(_url *url.URL, req *trackerTypes.AnnounceRequest) {
 
 	q.Set("compact", "1")
 	q.Set("supportcrypto", "1")
-	q.Set("ip", req.IP.String())
+  doIp := func(versionKey string, ip net.IP) {
+		if ip == nil {
+			return
+		}
+		ipString := ip.String()
+		q.Set(versionKey, ipString)
+		// Let's try listing them. BEP 3 mentions having an "ip" param, and BEP 7 says we can list
+		// addresses for other address-families, although it's not encouraged.
+		q.Add("ip", ipString)
+	}
+	doIp("ipv4", opt.ClientIpV4)
+	doIp("ipv6", opt.ClientIpV6)
 
 	qstr := strings.ReplaceAll(q.Encode(), "+", "%20")
 
