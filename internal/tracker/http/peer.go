@@ -1,6 +1,10 @@
 package httpTracker
 
-import "net"
+import (
+	"net"
+
+	"github.com/anacrolix/dht/v2/krpc"
+)
 
 type Peer struct {
 	IP   net.IP `bencode:"ip"`
@@ -16,4 +20,10 @@ func (p *Peer) FromDictInterface(d map[string]interface{}) {
 	}
 
 	p.Port = int(d["port"].(int64))
+}
+
+func (p Peer) FromNodeAddr(na krpc.NodeAddr) Peer {
+  p.IP = na.IP
+  p.Port = na.Port
+  return p
 }

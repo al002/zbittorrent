@@ -164,7 +164,6 @@ func (c *Client) request(ctx context.Context, action Action, body []byte) (respB
 
 	select {
 	case dr := <-respChan:
-    fmt.Printf("dr action %v\n", dr.Header.Action)
 		if dr.Header.Action == action {
 			respBody = dr.Body
 			addr = dr.Addr

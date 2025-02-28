@@ -38,7 +38,7 @@ func (t Tracker) Announce() (res trHttp.AnnounceResponse, err error) {
 			DialContext: t.DialContext,
 			ServerName:  t.ServeName,
 		},
-		// TODO: support context
+		// TODO: logger support context
 		Logger:       t.Logger,
 		ListenPacket: t.ListenPacket,
 	})
