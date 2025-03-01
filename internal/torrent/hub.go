@@ -2,10 +2,11 @@ package torrent
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/al002/zbittorrent/internal/logger"
+	"github.com/al002/zbittorrent/pkg/deferlock"
 	"github.com/al002/zbittorrent/pkg/metainfo"
+	"github.com/al002/zbittorrent/pkg/types"
 )
 
 type HubConfig struct {
@@ -18,7 +19,8 @@ type Hub struct {
 	logger   logger.Logger
 	torrents map[metainfo.Hash]*Torrent
 	config   HubConfig
-	mu       sync.RWMutex
+	peerId   types.PeerID
+	mu       deferlock.DeferLock
 }
 
 func (h *Hub) NewHub(cfg HubConfig, log logger.Logger) *Hub {
@@ -51,7 +53,10 @@ func (h *Hub) AddTorrentFromFile(filename string) (*Torrent, error) {
 		return nil, fmt.Errorf("torrent already exists")
 	}
 
+	torrent.H = h
 	h.torrents[torrent.InfoHash] = torrent
+
+	torrent.scrapeTrackers()
 
 	return torrent, nil
 }
@@ -81,4 +86,24 @@ func (h *Hub) GetTorrent(infoHash metainfo.Hash) (*Torrent, bool) {
 
 	torrent, exists := h.torrents[infoHash]
 	return torrent, exists
+}
+
+func (h *Hub) RLock() {
+	h.mu.RLock()
+}
+
+func (h *Hub) RUnlock() {
+	h.mu.RUnlock()
+}
+
+func (h *Hub) Lock() {
+	h.mu.Lock()
+}
+
+func (h *Hub) Unlock() {
+	h.mu.Unlock()
+}
+
+func (h *Hub) Locker() *deferlock.DeferLock {
+	return &h.mu
 }
