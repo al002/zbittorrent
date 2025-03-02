@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/al002/zbittorrent/pkg/metainfo"
@@ -30,8 +31,13 @@ type Stats struct {
 	ETA             time.Duration
 }
 
+type trackerAnnouncerKey struct {
+	infoHash [20]byte
+	url      string
+}
+
 type Torrent struct {
-  Trackers [][]string // The tiered tracker URIs
+	Trackers    [][]string // The tiered tracker URIs
 	Name        string
 	InfoHash    metainfo.Hash
 	MetaInfo    *metainfo.MetaInfo
@@ -39,9 +45,10 @@ type Torrent struct {
 	AddedAt     time.Time
 	CompletedAt *time.Time
 	State       State
+	H           *Hub
 
-	peerId types.PeerID
-	stats  Stats
+	// trackerAnnouncers map[trackerAnnouncerKey]torrentTrackerAnnouncer
+	stats Stats
 }
 
 func NewTorrentFromFile(filename string) (*Torrent, error) {
@@ -58,7 +65,7 @@ func NewTorrentFromFile(filename string) (*Torrent, error) {
 	}
 
 	return &Torrent{
-    Trackers: mi.ConvertToAnnounceList(),
+		Trackers: mi.ConvertToAnnounceList(),
 		Name:     info.FinalName(),
 		InfoHash: mi.HashInfoBytes(),
 		MetaInfo: mi,
@@ -86,4 +93,47 @@ func (t *Torrent) Resume() error {
 
 func (t *Torrent) GetState() State {
 	return t.State
+}
+
+func (t *Torrent) scrapeTrackers() {
+	for _, tier := range t.Trackers {
+		for _, url := range tier {
+			t.prepareScrapingTracker(url)
+		}
+	}
+}
+
+func (t *Torrent) prepareScrapingTracker(_url string) {
+	if _url == "" {
+		return
+	}
+
+	u, err := url.Parse(_url)
+	if err != nil {
+		if _url[0] != '*' {
+
+		}
+
+		return
+	}
+
+	if u.Scheme == "udp" {
+		u.Scheme = "udp4"
+		t.prepareScrapingTracker(u.String())
+		u.Scheme = "udp6"
+		t.prepareScrapingTracker(u.String())
+	}
+
+	t.startScrapingTracker(u, _url, t.InfoHash)
+}
+
+func (t *Torrent) startScrapingTracker(u *url.URL, urlStr string, infoHash metainfo.Hash) {
+	announcerKey := trackerAnnouncerKey{
+		infoHash: infoHash,
+		url:      urlStr,
+	}
+
+	// if _, ok := t.trackerAnnouncers[announcerKey]; ok {
+	// 	return
+	// }
 }
