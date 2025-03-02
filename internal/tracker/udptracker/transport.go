@@ -230,6 +230,7 @@ func (t *Transport) Run() {
 			}
 
       // It is will always set connect action response first
+      // possibly trigger sendAndReceiveConnect trx.request.(*connection).done
 			trx.request.SetResponse(buf, err)
 			trx.cancel()
 		case <-t.closeC:
@@ -362,6 +363,7 @@ func retryTransaction(trx *transaction, conn *net.UDPConn, addr net.Addr) {
 	for {
 		select {
 		case <-ticker.C:
+      // Sent request
 			_, _ = conn.WriteTo(data, addr)
 		case <-trx.ctx.Done():
 			return
