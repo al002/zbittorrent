@@ -73,24 +73,67 @@ func newTorrent(
 }
 
 func (t *torrent) run() {
-  for {
-    select {
-    case <-t.closeC:
-      t.close()
-      close(t.doneC)
-      return
-    case <-t.startCommandC:
-    case <-t.stopCommandC:
-    case <-t.announceCommandC:
-    case <-t.announcersStoppedC:
-    case req := <-t.trackersCommandC:
-    case trackers := <-t.addTrackersCommandC:
-    }
-  }
+	for {
+		select {
+		case <-t.closeC:
+			t.close()
+			close(t.doneC)
+			return
+		case <-t.startCommandC:
+		case <-t.stopCommandC:
+		case <-t.announceCommandC:
+		case <-t.announcersStoppedC:
+		case req := <-t.trackersCommandC:
+		case trackers := <-t.addTrackersCommandC:
+		}
+	}
 }
 
+func (t *torrent) Name() string {
+	return t.name
+}
+
+func (t *torrent) InfoHash() []byte {
+	b := make([]byte, 20)
+	copy(b, t.infoHash[:])
+
+	return b
+}
+
+func (t *torrent) Files() ([]File, error) {
+	if t.info == nil {
+		return nil, errors.New("torrent metadata not ready")
+	}
+
+	files := make([]File, 0, len(t.info.Files))
+
+	for _, f := range t.info.Files {
+		if !f.Padding {
+			files = append(files, File{
+				path:   f.Path,
+				length: f.Length,
+			})
+		}
+	}
+
+	return files, nil
+}
 
 var errClosed = errors.New("torrent is closed")
+
 func (t *torrent) close() {
-  // t.stop(errClosed)
+	// t.stop(errClosed)
+}
+
+type File struct {
+	path   string
+	length int64
+}
+
+func (f File) Path() string {
+  return f.path
+}
+
+func (f File) Length() int64 {
+  return f.length
 }
