@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"errors"
+	"net"
 	"time"
 
 	"github.com/al002/zbittorrent/internal/announcer"
@@ -10,6 +11,7 @@ import (
 )
 
 type torrent struct {
+	session  *Session
 	id       string
 	addedAt  time.Time
 	infoHash [20]byte
@@ -20,6 +22,14 @@ type torrent struct {
 	name       string
 	closeC     chan struct{} // When Stop() is called, it will close this channel to singal run() function to stop
 	doneC      chan struct{} // Close() blocks untile doneC is closed
+	errC       chan error
+
+	completeC chan struct{}
+
+	port int
+
+	// last error sent to errC
+	lastError error
 
 	// Channels for sending a message to run() loop
 	trackersCommandC    chan trackersRequest   // Trackers()
@@ -27,6 +37,9 @@ type torrent struct {
 	stopCommandC        chan struct{}          // Stop()
 	announceCommandC    chan struct{}          // Announce()
 	addTrackersCommandC chan []tracker.Tracker // AddTrackers()
+
+	// Trackers send announce responses to this channel
+	announcePeersC chan []*net.TCPAddr
 
 	// Announces the status of torrent to trackers to get peer addresses periodically.
 	announcers            []*announcer.PeriodicalAnnouncer
@@ -37,6 +50,7 @@ type torrent struct {
 }
 
 func newTorrent(
+	session *Session,
 	id string,
 	addedAt time.Time,
 	infoHash []byte,
@@ -52,12 +66,14 @@ func newTorrent(
 	copy(ih[:], infoHash)
 
 	t := &torrent{
+		session:             session,
 		id:                  id,
 		addedAt:             addedAt,
 		infoHash:            ih,
 		info:                info,
 		trackers:            trackers,
 		name:                name,
+		completeC:           make(chan struct{}),
 		closeC:              make(chan struct{}),
 		doneC:               make(chan struct{}),
 		startCommandC:       make(chan struct{}),
@@ -80,11 +96,12 @@ func (t *torrent) run() {
 			close(t.doneC)
 			return
 		case <-t.startCommandC:
-		case <-t.stopCommandC:
-		case <-t.announceCommandC:
-		case <-t.announcersStoppedC:
-		case req := <-t.trackersCommandC:
-		case trackers := <-t.addTrackersCommandC:
+      t.start()
+		// case <-t.stopCommandC:
+		// case <-t.announceCommandC:
+		// case <-t.announcersStoppedC:
+		// case req := <-t.trackersCommandC:
+		// case trackers := <-t.addTrackersCommandC:
 		}
 	}
 }
@@ -131,9 +148,9 @@ type File struct {
 }
 
 func (f File) Path() string {
-  return f.path
+	return f.path
 }
 
 func (f File) Length() int64 {
-  return f.length
+	return f.length
 }

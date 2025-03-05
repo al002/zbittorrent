@@ -16,15 +16,23 @@ const (
 )
 
 type Tracker struct {
-	URL          string
-	Status       TrackerStatus
-	Leechers     int
-	Seeders      int
+	URL      string
+	Status   TrackerStatus
+	Leechers int
+	Seeders  int
 	// Error        *AnnouceError
 	Warning      string
 	LastAnnounce time.Time
 	NextAnnounce time.Time
 }
+
 type trackersRequest struct {
 	Response chan []Tracker
+}
+
+func (t *torrent) Start() {
+	select {
+	case t.startCommandC <- struct{}{}:
+	case <-t.closeC:
+	}
 }

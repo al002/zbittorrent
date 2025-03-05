@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+var (
+  publicPeerIDPrefix = "-ZB" + Version + "-"
+  trackerHTTPPublicUserAgent = "ZB/" + Version
+)
+
 type Config struct {
 	// Database file to save resume data.
 	Database string `mapstructure:"database"`
@@ -78,8 +83,8 @@ type Config struct {
 
 var DefaultConfig = Config{
 	// Session
-	Database:                               "~/rain/session.db",
-	DataDir:                                "~/rain/data",
+	Database:                               "~/zbittorrent/session.db",
+	DataDir:                                "~/zbittorrent/data",
 	Host:                                   "0.0.0.0",
 	PortBegin:                              20000,
 	PortEnd:                                30000,
