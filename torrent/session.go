@@ -13,9 +13,9 @@ import (
 type Session struct {
 	config Config
 
-  trackerManager *trackermanager.TrackerManager
+	trackerManager *trackermanager.TrackerManager
 
-  peerID [20]byte
+	peerID    [20]byte
 	mTorrents sync.RWMutex
 	torrents  map[string]*Torrent
 
@@ -30,46 +30,46 @@ type Session struct {
 }
 
 func NewSession(cfg Config) (*Session, error) {
-  if cfg.PortBegin >= cfg.PortEnd {
-    return nil, errors.New("Invalid port range")
-  }
+	if cfg.PortBegin >= cfg.PortEnd {
+		return nil, errors.New("Invalid port range")
+	}
 
-  // if cfg.MaxOpenFiles > 0 {
-  // }
+	// if cfg.MaxOpenFiles > 0 {
+	// }
 
-  var err error
-  cfg.DataDir, err = homedir.Expand(cfg.DataDir)
-  if err != nil {
-    return nil, err
-  }
+	var err error
+	cfg.DataDir, err = homedir.Expand(cfg.DataDir)
+	if err != nil {
+		return nil, err
+	}
 
-  ports := make(map[int]struct{})
-  for p := cfg.PortBegin; p < cfg.PortEnd; p++ {
-    ports[int(p)] = struct{}{}
-  }
+	ports := make(map[int]struct{})
+	for p := cfg.PortBegin; p < cfg.PortEnd; p++ {
+		ports[int(p)] = struct{}{}
+	}
 
-  bl := blocklist.New()
-  var blTracker *blocklist.Blocklist
-  if cfg.BlocklistEnabledForTrackers {
-    blTracker = bl
-  }
+	bl := blocklist.New()
+	var blTracker *blocklist.Blocklist
+	if cfg.BlocklistEnabledForTrackers {
+		blTracker = bl
+	}
 
-  c := &Session{
-    config: cfg,
-    blocklist: bl,
-    trackerManager: trackermanager.New(blTracker, cfg.DNSResolveTimeout, !cfg.TrackerHTTPVerifyTLS),
-    torrents: make(map[string]*Torrent),
-    availablePorts: ports,
-    closeC: make(chan struct{}),
-  }
+	c := &Session{
+		config:         cfg,
+		blocklist:      bl,
+		trackerManager: trackermanager.New(blTracker, cfg.DNSResolveTimeout, !cfg.TrackerHTTPVerifyTLS),
+		torrents:       make(map[string]*Torrent),
+		availablePorts: ports,
+		closeC:         make(chan struct{}),
+	}
 
-  return c, nil
+	return c, nil
 }
 
 func (s *Session) getTrackerUserAgent(private bool) string {
-  if private {
-    return s.config.TrackerHTTPPrivateUserAgent
-  }
+	if private {
+		return s.config.TrackerHTTPPrivateUserAgent
+	}
 
-  return trackerHTTPPublicUserAgent
+	return trackerHTTPPublicUserAgent
 }
