@@ -31,10 +31,11 @@ type Transport struct {
 	log        log.Logger
 }
 
-func NewTransport(bl *blocklist.Blocklist, dnsTimeout time.Duration) *Transport {
+func NewTransport(bl *blocklist.Blocklist, dnsTimeout time.Duration, logger log.Logger) *Transport {
 	return &Transport{
 		blocklist:  bl,
 		dnsTimeout: dnsTimeout,
+		log:        logger,
 		requestC:   make(chan *transportRequest),
 		readC:      make(chan []byte),
 		closeC:     make(chan struct{}),
@@ -70,7 +71,7 @@ func (t *Transport) Do(req *transportRequest) ([]byte, error) {
 }
 
 func (t *Transport) Run() {
-	t.log.Debug("Sstarting udp transport run loop")
+	t.log.Debug("Starting udp transport run loop")
 	var listening bool
 	var uaddr net.UDPAddr
 
@@ -109,10 +110,10 @@ func (t *Transport) Run() {
 			}
 			conn, ok := connections[req.dest]
 			if !ok {
-        // No connection for dest, make new one
+				// No connection for dest, make new one
 				conn = newConnection(req)
 				connections[req.dest] = conn
-        // Make new transaction for this connection
+				// Make new transaction for this connection
 				trx, err := beginTransaction(conn)
 				if err != nil {
 					conn.SetResponse(nil, err)
@@ -122,9 +123,9 @@ func (t *Transport) Run() {
 				}
 			} else {
 				if !conn.connectedAt.IsZero() {
-          // connection is connected
+					// connection is connected
 					req.ConnectionID = conn.id
-          // make new transaction ID
+					// make new transaction ID
 					trx, err := beginTransaction(req)
 					if err != nil {
 						req.SetResponse(nil, err)
@@ -133,16 +134,16 @@ func (t *Transport) Run() {
 						go retryTransaction(trx, udpConn, conn.addr)
 					}
 				} else {
-          // connection is in connecting state
+					// connection is in connecting state
 					conn.requests = append(conn.requests, req)
 				}
 			}
 		case res := <-connectDone:
-      // connect finished, delete transaction ID
+			// connect finished, delete transaction ID
 			conn := res.trx.request.(*connection)
 			delete(transactions, res.trx.id)
 
-      // Handle connection error
+			// Handle connection error
 			if res.err != nil {
 				delete(connections, res.dest)
 				for _, req := range conn.requests {
@@ -156,7 +157,7 @@ func (t *Transport) Run() {
 			conn.id = res.id
 			conn.connectedAt = res.connectedAt
 
-      // Expire the connection after efined period
+			// Expire the connection after efined period
 			go func(dest string) {
 				select {
 				case <-time.After(connectionIDInterval):
@@ -170,7 +171,7 @@ func (t *Transport) Run() {
 				}
 			}(res.dest)
 
-      // Start announce transaction
+			// Start announce transaction
 			for _, req := range conn.requests {
 				req.ConnectionID = conn.id
 				trx, err := beginTransaction(req)
@@ -181,13 +182,13 @@ func (t *Transport) Run() {
 				}
 			}
 
-      // Clear waiting requests
+			// Clear waiting requests
 			conn.requests = nil
 		case dest := <-connectionExpired:
-      // Connection expired
+			// Connection expired
 			delete(connections, dest)
 		case buf := <-t.readC:
-      // Read udp message, data from readLoop, include connect or other action
+			// Read udp message, data from readLoop, include connect or other action
 			var header udpMessageHeader
 			err := binary.Read(bytes.NewReader(buf), binary.BigEndian, &header)
 			if err != nil {
@@ -229,12 +230,12 @@ func (t *Transport) Run() {
 				}
 			}
 
-      // It is will always set connect action response first
-      // possibly trigger sendAndReceiveConnect trx.request.(*connection).done
+			// It is will always set connect action response first
+			// possibly trigger sendAndReceiveConnect trx.request.(*connection).done
 			trx.request.SetResponse(buf, err)
 			trx.cancel()
 		case <-t.closeC:
-      // Transport close
+			// Transport close
 			for _, conn := range connections {
 				for _, req := range conn.requests {
 					req.SetResponse(nil, errors.New("transport closing"))
@@ -299,7 +300,7 @@ func resolveDestinationAndConnect(trx *transaction, dest string, udpConn *net.UD
 	if err != nil {
 		res.err = err
 		select {
-    // Trigger connectDone, but has err
+		// Trigger connectDone, but has err
 		case connectDoneC <- res:
 		case <-stopC:
 		}
@@ -317,7 +318,7 @@ func resolveDestinationAndConnect(trx *transaction, dest string, udpConn *net.UD
 	}
 
 	select {
-  // Trigger connectDone, succesful status
+	// Trigger connectDone, succesful status
 	case connectDoneC <- res:
 	case <-stopC:
 	}
@@ -327,7 +328,7 @@ func sendAndReceiveConnect(trx *transaction, conn *net.UDPConn, addr net.Addr) (
 	go retryTransaction(trx, conn, addr)
 
 	select {
-  // Request is done
+	// Request is done
 	case <-trx.request.(*connection).done:
 	case <-trx.ctx.Done():
 		return 0, trx.ctx.Err()
@@ -352,7 +353,7 @@ func sendAndReceiveConnect(trx *transaction, conn *net.UDPConn, addr net.Addr) (
 }
 
 func retryTransaction(trx *transaction, conn *net.UDPConn, addr net.Addr) {
-  // sent transaction with backoff retry
+	// sent transaction with backoff retry
 	var b bytes.Buffer
 	_, _ = trx.request.WriteTo(&b)
 	data := b.Bytes()
@@ -363,7 +364,7 @@ func retryTransaction(trx *transaction, conn *net.UDPConn, addr net.Addr) {
 	for {
 		select {
 		case <-ticker.C:
-      // Sent request
+			// Sent request
 			_, _ = conn.WriteTo(data, addr)
 		case <-trx.ctx.Done():
 			return

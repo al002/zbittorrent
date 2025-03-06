@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/al002/zbittorrent/internal/blocklist"
+	"github.com/al002/zbittorrent/internal/log"
 	"github.com/al002/zbittorrent/internal/resolver"
 	"github.com/al002/zbittorrent/internal/tracker"
 	"github.com/al002/zbittorrent/internal/tracker/httptracker"
@@ -19,14 +20,16 @@ import (
 type TrackerManager struct {
 	httpTransport *http.Transport
 	udpTransport  *udptracker.Transport
+  log log.Logger
 }
 
-func New(bl *blocklist.Blocklist, dnsTimeout time.Duration, tlsSkipVerify bool) *TrackerManager {
+func New(bl *blocklist.Blocklist, dnsTimeout time.Duration, tlsSkipVerify bool, logger log.Logger) *TrackerManager {
 	m := &TrackerManager{
 		httpTransport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: tlsSkipVerify},
 		},
-		udpTransport: udptracker.NewTransport(bl, dnsTimeout),
+		udpTransport: udptracker.NewTransport(bl, dnsTimeout, logger),
+    log: logger,
 	}
 
 	go m.udpTransport.Run()
@@ -62,10 +65,10 @@ func (m *TrackerManager) Get(s string, httpTimeout time.Duration, httpUserAgent 
 
 	switch u.Scheme {
 	case "http", "https":
-		tr := httptracker.New(s, u, httpTimeout, m.httpTransport, httpUserAgent, httpMaxResponseLength)
+		tr := httptracker.New(s, u, httpTimeout, m.httpTransport, httpUserAgent, httpMaxResponseLength, m.log)
 		return tr, nil
 	case "udp":
-		tr := udptracker.New(s, u, m.udpTransport)
+		tr := udptracker.New(s, u, m.udpTransport, m.log)
 		return tr, nil
 	default:
 		return nil, fmt.Errorf("unsupported tracker scheme: %s", u.Scheme)

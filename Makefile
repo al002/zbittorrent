@@ -12,6 +12,9 @@ validate: build
 info: build
 	./bin/zbittorrent info --config configs/config.yaml $(P)
 
+announce: build
+	./bin/zbittorrent announce --config configs/config.yaml $(P)
+
 clean:
 	rm -r bin/
 

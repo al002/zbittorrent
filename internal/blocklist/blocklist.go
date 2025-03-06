@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/al002/zbittorrent/internal/blocklist/stree"
-	"github.com/al002/zbittorrent/internal/log"
 )
 
 var errNotIPv4Address = errors.New("address is not ipv4")
@@ -19,7 +18,6 @@ type Blocklist struct {
 	tree   stree.Stree
 	m      sync.RWMutex
 	count  int
-	logger log.Logger
 }
 
 func New() *Blocklist {

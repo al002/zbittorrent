@@ -23,12 +23,13 @@ type UDPTracker struct {
 
 var _ tracker.Tracker = (*UDPTracker)(nil)
 
-func New(rawURL string, u *url.URL, t *Transport) *UDPTracker {
+func New(rawURL string, u *url.URL, t *Transport, log log.Logger) *UDPTracker {
 	return &UDPTracker{
 		rawURL:    rawURL,
 		dest:      u.Host,
 		urlData:   u.RequestURI(),
 		transport: t,
+		log:       log,
 	}
 }
 

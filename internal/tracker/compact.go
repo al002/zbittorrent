@@ -43,21 +43,21 @@ func (p *CompactPeer) Unmarshal(data []byte) error {
 }
 
 func DecodePeersCompact(b []byte) ([]*net.TCPAddr, error) {
-  if len(b)%6 != 0 {
-    return nil, errors.New("invalid peer list length")
-  }
+	if len(b)%6 != 0 {
+		return nil, errors.New("invalid peer list length")
+	}
 
-  count := len(b) / 6
-  addrs := make([]*net.TCPAddr, 0, count)
+	count := len(b) / 6
+	addrs := make([]*net.TCPAddr, 0, count)
 
-  for i := 0; i < len(b); i += 1 {
-    var peer CompactPeer
-    err := peer.Unmarshal(b[i : i+6])
-    if err != nil {
-      return nil, err
-    }
-    addrs = append(addrs, peer.Addr())
-  }
+	for i := 0; i < len(b); i += 6 {
+		var peer CompactPeer
+		err := peer.Unmarshal(b[i : i+6])
+		if err != nil {
+			return nil, err
+		}
+		addrs = append(addrs, peer.Addr())
+	}
 
-  return addrs, nil
+	return addrs, nil
 }

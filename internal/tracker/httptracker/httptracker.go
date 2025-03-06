@@ -30,7 +30,7 @@ type HTTPTracker struct {
 
 var _ tracker.Tracker = (*HTTPTracker)(nil)
 
-func New(rawURL string, u *url.URL, timeout time.Duration, t *http.Transport, userAgent string, maxResponseLength int64) *HTTPTracker {
+func New(rawURL string, u *url.URL, timeout time.Duration, t *http.Transport, userAgent string, maxResponseLength int64, log log.Logger) *HTTPTracker {
 	return &HTTPTracker{
 		rawURL:            rawURL,
 		transport:         t,
@@ -40,6 +40,7 @@ func New(rawURL string, u *url.URL, timeout time.Duration, t *http.Transport, us
 			Timeout:   timeout,
 			Transport: t,
 		},
+    log: log,
 	}
 }
 

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/al002/zbittorrent/internal/config"
-	"github.com/al002/zbittorrent/internal/logger"
+	logger "github.com/al002/zbittorrent/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -41,8 +41,9 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.zbittorrent/config.yaml)")
 
-  rootCmd.AddCommand(validateCmd)
-  rootCmd.AddCommand(infoCmd)
+	rootCmd.AddCommand(validateCmd)
+	rootCmd.AddCommand(infoCmd)
+  rootCmd.AddCommand(announceCmd)
 }
 
 func initConfig() {

@@ -96,12 +96,12 @@ func (t *torrent) run() {
 			close(t.doneC)
 			return
 		case <-t.startCommandC:
-      t.start()
-		// case <-t.stopCommandC:
-		// case <-t.announceCommandC:
-		// case <-t.announcersStoppedC:
-		// case req := <-t.trackersCommandC:
-		// case trackers := <-t.addTrackersCommandC:
+			t.start()
+			// case <-t.stopCommandC:
+			// case <-t.announceCommandC:
+			// case <-t.announcersStoppedC:
+			// case req := <-t.trackersCommandC:
+			// case trackers := <-t.addTrackersCommandC:
 		}
 	}
 }

@@ -119,6 +119,7 @@ func (a *PeriodicalAnnouncer) Run() {
 			}
 			a.doAnnounce(ctx, tracker.EventNone, a.numWant)
 		case resp := <-a.responseC:
+			fmt.Printf("announce responsed %+v\n", resp)
 			a.status = Working
 			a.seeders = int(resp.Seeders)
 			a.leechers = int(resp.Leechers)

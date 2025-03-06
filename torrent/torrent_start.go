@@ -6,45 +6,45 @@ import (
 )
 
 func (t *torrent) start() {
-  if t.errC != nil {
-    return
-  }
+	if t.errC != nil {
+		return
+	}
 
-  if t.stoppedEventAnnouncer != nil {
-    t.stoppedEventAnnouncer.Close()
-    t.stoppedEventAnnouncer = nil
-  }
+	if t.stoppedEventAnnouncer != nil {
+		t.stoppedEventAnnouncer.Close()
+		t.stoppedEventAnnouncer = nil
+	}
 
-  t.errC = make(chan error, 1)
-  t.lastError = nil
+	t.errC = make(chan error, 1)
+	t.lastError = nil
 
-  t.startAnnouncers()
-  // if t.info != nil {
-  //
-  // } else {
-  //   t.startAnnouncers()
-  // }
+	t.startAnnouncers()
+	// if t.info != nil {
+	//
+	// } else {
+	//   t.startAnnouncers()
+	// }
 }
 
 func (t *torrent) startAnnouncers() {
-  if len(t.announcers) == 0 {
-    for _, tr := range t.trackers {
-      t.startNewAnnouncer(tr)
-    }
-  }
+	if len(t.announcers) == 0 {
+		for _, tr := range t.trackers {
+			t.startNewAnnouncer(tr)
+		}
+	}
 }
 
 func (t *torrent) startNewAnnouncer(tr tracker.Tracker) {
-  a := announcer.NewPeriodicalAnnouncer(
-    tr,
-    t.session.config.TrackerNumWant,
-    t.session.config.TrackerMinAnnounceInterval,
-    t.announceGetTorrent,
-    t.completeC,
-    t.announcePeersC,
-    )
+	a := announcer.NewPeriodicalAnnouncer(
+		tr,
+		t.session.config.TrackerNumWant,
+		t.session.config.TrackerMinAnnounceInterval,
+		t.announceGetTorrent,
+		t.completeC,
+		t.announcePeersC,
+	)
 
-  t.announcers = append(t.announcers, a)
+	t.announcers = append(t.announcers, a)
 
-  go a.Run()
+	go a.Run()
 }

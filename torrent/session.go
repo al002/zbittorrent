@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/al002/zbittorrent/internal/blocklist"
+	"github.com/al002/zbittorrent/internal/log"
 	"github.com/al002/zbittorrent/internal/trackermanager"
 	"github.com/mitchellh/go-homedir"
 )
@@ -14,6 +15,7 @@ type Session struct {
 	config Config
 
 	trackerManager *trackermanager.TrackerManager
+	log            log.Logger
 
 	peerID    [20]byte
 	mTorrents sync.RWMutex
@@ -29,7 +31,7 @@ type Session struct {
 	closeC chan struct{}
 }
 
-func NewSession(cfg Config) (*Session, error) {
+func NewSession(cfg Config, logger log.Logger) (*Session, error) {
 	if cfg.PortBegin >= cfg.PortEnd {
 		return nil, errors.New("Invalid port range")
 	}
@@ -56,8 +58,9 @@ func NewSession(cfg Config) (*Session, error) {
 
 	c := &Session{
 		config:         cfg,
+		log:            logger,
 		blocklist:      bl,
-		trackerManager: trackermanager.New(blTracker, cfg.DNSResolveTimeout, !cfg.TrackerHTTPVerifyTLS),
+		trackerManager: trackermanager.New(blTracker, cfg.DNSResolveTimeout, !cfg.TrackerHTTPVerifyTLS, logger),
 		torrents:       make(map[string]*Torrent),
 		availablePorts: ports,
 		closeC:         make(chan struct{}),
