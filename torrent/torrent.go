@@ -1,6 +1,7 @@
 package torrent
 
 import (
+	"crypto/rand"
 	"errors"
 	"net"
 	"time"
@@ -16,6 +17,7 @@ type torrent struct {
 	addedAt  time.Time
 	infoHash [20]byte
 	info     *metainfo.Info
+	peerID   [20]byte
 	// List of addresses to announce
 	trackers   []tracker.Tracker
 	rawTracker []string
@@ -84,8 +86,22 @@ func newTorrent(
 		announcersStoppedC:  make(chan struct{}),
 	}
 
+	n := t.copyPeerIDPrefix()
+	_, err := rand.Read(t.peerID[n:])
+	if err != nil {
+		return nil, err
+	}
+
 	go t.run()
 	return t, nil
+}
+
+func (t *torrent) copyPeerIDPrefix() int {
+	if t.info != nil && t.info.Private {
+		return copy(t.peerID[:], t.session.config.PrivatePeerIDPrefix)
+	}
+
+	return copy(t.peerID[:], publicPeerIDPrefix)
 }
 
 func (t *torrent) run() {

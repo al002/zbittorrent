@@ -5,7 +5,7 @@ import "github.com/al002/zbittorrent/internal/tracker"
 func (t *torrent) announceGetTorrent() tracker.Torrent {
   tr := tracker.Torrent{
     InfoHash: t.infoHash,
-    PeerID: t.session.peerID,
+    PeerID: t.peerID,
     Port: t.port,
     BytesDownlowded: 0,
     BytesUploaded: 0,

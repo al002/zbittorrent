@@ -17,7 +17,6 @@ type Session struct {
 	trackerManager *trackermanager.TrackerManager
 	log            log.Logger
 
-	peerID    [20]byte
 	mTorrents sync.RWMutex
 	torrents  map[string]*Torrent
 
