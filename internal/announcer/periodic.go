@@ -36,7 +36,7 @@ type PeriodicalAnnouncer struct {
 	leechers       int
 	warningMsg     string
 	completedC     chan struct{}
-	newPeers       chan []*net.TCPAddr
+	newPeersC      chan []*net.TCPAddr
 	backoff        backoff.BackOff
 	getTorrent     func() tracker.Torrent
 	lastAnnounce   time.Time
@@ -55,14 +55,14 @@ type PeriodicalAnnouncer struct {
 	statsCommandC chan statsRequest
 }
 
-func NewPeriodicalAnnouncer(t tracker.Tracker, numWant int, minInterval time.Duration, getTorrent func() tracker.Torrent, completedC chan struct{}, newPeers chan []*net.TCPAddr) *PeriodicalAnnouncer {
+func NewPeriodicalAnnouncer(t tracker.Tracker, numWant int, minInterval time.Duration, getTorrent func() tracker.Torrent, completedC chan struct{}, newPeersC chan []*net.TCPAddr) *PeriodicalAnnouncer {
 	return &PeriodicalAnnouncer{
 		Tracker:        t,
 		status:         NotContactedYet,
 		numWant:        numWant,
 		minInterval:    minInterval,
 		completedC:     completedC,
-		newPeers:       newPeers,
+		newPeersC:      newPeersC,
 		getTorrent:     getTorrent,
 		needMorePeersC: make(chan struct{}, 1),
 		responseC:      make(chan *tracker.AnnounceResponse),
@@ -138,7 +138,7 @@ func (a *PeriodicalAnnouncer) Run() {
 			resetTimer(interval)
 			go func() {
 				select {
-				case a.newPeers <- resp.Peers:
+				case a.newPeersC <- resp.Peers:
 				case <-a.closeC:
 				}
 			}()

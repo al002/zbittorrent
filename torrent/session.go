@@ -106,3 +106,20 @@ func (s *Session) getTrackerUserAgent(private bool) string {
 
 	return trackerHTTPPublicUserAgent
 }
+
+func (s *Session) getPort() (int, error) {
+  s.mPorts.Lock()
+  defer s.mPorts.Unlock()
+  for p := range s.availablePorts {
+    delete(s.availablePorts, p)
+    return p, nil
+  }
+
+  return 0, errors.New("no free port")
+}
+
+func (s *Session) releasePort(port int) {
+  s.mPorts.Lock()
+  defer s.mPorts.Unlock()
+  s.availablePorts[port] = struct{}{}
+}

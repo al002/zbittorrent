@@ -1,6 +1,9 @@
 package torrent
 
 import (
+	"net"
+
+	"github.com/al002/zbittorrent/internal/acceptor"
 	"github.com/al002/zbittorrent/internal/announcer"
 	"github.com/al002/zbittorrent/internal/tracker"
 )
@@ -18,6 +21,7 @@ func (t *torrent) start() {
 	t.errC = make(chan error, 1)
 	t.lastError = nil
 
+  t.startAcceptor()
 	t.startAnnouncers()
 	// if t.info != nil {
 	//
@@ -47,4 +51,32 @@ func (t *torrent) startNewAnnouncer(tr tracker.Tracker) {
 	t.announcers = append(t.announcers, a)
 
 	go a.Run()
+}
+
+func (t *torrent) startAcceptor() {
+	if t.acceptor != nil {
+		return
+	}
+
+	ip := net.ParseIP(t.session.config.Host)
+	listener, err := net.ListenTCP("tcp4", &net.TCPAddr{
+		IP:   ip,
+		Port: t.port,
+	})
+
+	if err != nil {
+		t.log.Warn(
+			"cannot listen port",
+			"port", t.port,
+			"err", err.Error(),
+		)
+	} else {
+		t.log.Info(
+			"Listening peers on tcp://"+listener.Addr().String(),
+			"addr", listener.Addr().String(),
+		)
+    t.port = listener.Addr().(*net.TCPAddr).Port
+    t.acceptor = acceptor.New(listener, t.incomingConnC, t.log)
+    go t.acceptor.Run()
+	}
 }

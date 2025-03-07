@@ -6,7 +6,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/al002/zbittorrent/internal/acceptor"
 	"github.com/al002/zbittorrent/internal/announcer"
+	"github.com/al002/zbittorrent/internal/log"
 	"github.com/al002/zbittorrent/internal/metainfo"
 	"github.com/al002/zbittorrent/internal/tracker"
 )
@@ -18,6 +20,8 @@ type torrent struct {
 	infoHash [20]byte
 	info     *metainfo.Info
 	peerID   [20]byte
+	peerIDs  map[[20]byte]struct{}
+
 	// List of addresses to announce
 	trackers   []tracker.Tracker
 	rawTracker []string
@@ -49,6 +53,13 @@ type torrent struct {
 
 	// A signal sent to run() loop when announcers are stopped
 	announcersStoppedC chan struct{}
+
+	// Listen for incoming peer connection
+	acceptor *acceptor.Acceptor
+	// New raw connections created by OutgoingHandshaker
+	incomingConnC chan net.Conn
+
+	log log.Logger
 }
 
 func newTorrent(
@@ -58,7 +69,9 @@ func newTorrent(
 	infoHash []byte,
 	info *metainfo.Info,
 	name string,
+	port int,
 	trackers []tracker.Tracker,
+	l log.Logger,
 ) (*torrent, error) {
 	if len(infoHash) != 20 {
 		return nil, errors.New("invalid infoHash (must be 20 bytes)")
@@ -84,6 +97,10 @@ func newTorrent(
 		addTrackersCommandC: make(chan []tracker.Tracker),
 		announceCommandC:    make(chan struct{}),
 		announcersStoppedC:  make(chan struct{}),
+
+		incomingConnC: make(chan net.Conn),
+		peerIDs:       make(map[[20]byte]struct{}),
+		log:           l,
 	}
 
 	n := t.copyPeerIDPrefix()
@@ -118,6 +135,10 @@ func (t *torrent) run() {
 			// case <-t.announcersStoppedC:
 			// case req := <-t.trackersCommandC:
 			// case trackers := <-t.addTrackersCommandC:
+			// case conn := <-t.incomingConnC:
+			//   t.handleNewConnection(conn)
+			// case addrs := <-t.announcePeersC:
+			//   t.handleNewPeers(addrs, peersource.Tracker)
 		}
 	}
 }
