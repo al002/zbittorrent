@@ -36,3 +36,8 @@ func (t *torrent) Start() {
 	case <-t.closeC:
 	}
 }
+
+func (t *torrent) Close() {
+  close(t.closeC)
+  <-t.doneC
+}

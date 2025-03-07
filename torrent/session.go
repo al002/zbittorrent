@@ -9,13 +9,16 @@ import (
 	"github.com/al002/zbittorrent/internal/log"
 	"github.com/al002/zbittorrent/internal/trackermanager"
 	"github.com/mitchellh/go-homedir"
+	"golang.org/x/time/rate"
 )
 
 type Session struct {
 	config Config
 
-	trackerManager *trackermanager.TrackerManager
-	log            log.Logger
+	trackerManager  *trackermanager.TrackerManager
+	log             log.Logger
+	downloadLimiter *rate.Limiter
+	uploadLimiter   *rate.Limiter
 
 	mTorrents sync.RWMutex
 	torrents  map[string]*Torrent
@@ -65,7 +68,35 @@ func NewSession(cfg Config, logger log.Logger) (*Session, error) {
 		closeC:         make(chan struct{}),
 	}
 
+	dlSpeed := cfg.SpeedLimitDownload * 1024
+	if cfg.SpeedLimitDownload > 0 {
+		c.downloadLimiter = rate.NewLimiter(rate.Limit(dlSpeed), int(dlSpeed))
+	}
+	ulSpeed := cfg.SpeedLimitUpload * 1024
+	if cfg.SpeedLimitUpload > 0 {
+		c.uploadLimiter = rate.NewLimiter(rate.Limit(ulSpeed), int(ulSpeed))
+	}
+
 	return c, nil
+}
+
+func (s *Session) Close() {
+	close(s.closeC)
+
+	var wg sync.WaitGroup
+	s.mTorrents.Lock()
+	wg.Add(len(s.torrents))
+	for _, t := range s.torrents {
+		go func(t *Torrent) {
+			t.torrent.Close()
+			wg.Done()
+		}(t)
+	}
+	wg.Wait()
+	s.torrents = nil
+	s.mTorrents.Unlock()
+
+	s.trackerManager.Close()
 }
 
 func (s *Session) getTrackerUserAgent(private bool) string {

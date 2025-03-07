@@ -31,6 +31,8 @@ var announceCmd = &cobra.Command{
       fmt.Printf("new session error: %w\n", err)
     }
 
+    defer s.Close()
+
     s.AddTorrent(&buf, &torrent.AddTorrentOptions{
       ID: "test1",
     })

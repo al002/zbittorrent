@@ -6,8 +6,8 @@ import (
 )
 
 var (
-  publicPeerIDPrefix = "-ZB" + Version + "-"
-  trackerHTTPPublicUserAgent = "ZB/" + Version
+	publicPeerIDPrefix         = "-ZB" + Version + "-"
+	trackerHTTPPublicUserAgent = "ZB/" + Version
 )
 
 type Config struct {
@@ -32,53 +32,53 @@ type Config struct {
 	BlocklistUpdateInterval time.Duration `mapstructure:"blocklist_update_interval"`
 	BlocklistUpdateTimeout  time.Duration `mapstructure:"blocklist_update_timeout"`
 	// Do not contact tracker if it's IP is blocked
-	BlocklistEnabledForTrackers bool `yaml:"blocklist-enabled-for-trackers"`
+	BlocklistEnabledForTrackers bool `mapstructure:"blocklist-enabled-for-trackers"`
 	// Do not connect to peer if it's IP is blocked
-	BlocklistEnabledForOutgoingConnections bool `yaml:"blocklist_enabled_for_outgoing_connections"`
+	BlocklistEnabledForOutgoingConnections bool `mapstructure:"blocklist_enabled_for_outgoing_connections"`
 	// Do not accept connections from peer if it's IP is blocked
-	BlocklistEnabledForIncomingConnections bool `yaml:"blocklist_enabled_for_incoming_connections"`
+	BlocklistEnabledForIncomingConnections bool `mapstructure:"blocklist_enabled_for_incoming_connections"`
 	// Do not accept response larger than this size
-	BlocklistMaxResponseSize int64 `yaml:"blocklist_max_response_size"`
+	BlocklistMaxResponseSize int64 `mapstructure:"blocklist_max_response_size"`
 	//  // Time to wait when adding torrent with AddURI().
-	//  TorrentAddHTTPTimeout time.Duration `yaml:"torrent_add_http_timeout"`
+	//  TorrentAddHTTPTimeout time.Duration `mapstructure:"torrent_add_http_timeout"`
 	// // Maximum allowed size to be received by metadata extension.
-	// MaxMetadataSize uint `yaml:"max_metadata_size"`
+	// MaxMetadataSize uint `mapstructure:"max_metadata_size"`
 	// Maximum allowed size to be read when adding torrent.
-	MaxTorrentSize uint `yaml:"max_torrent_size"`
+	MaxTorrentSize uint `mapstructure:"max_torrent_size"`
 	// Time to wait when resolving host names for trackers and peers.
-	DNSResolveTimeout time.Duration `yaml:"dns_resolve_timeout"`
+	DNSResolveTimeout time.Duration `mapstructure:"dns_resolve_timeout"`
 	// Global download speed limit in KB/s.
-	SpeedLimitDownload int64 `yaml:"speed_limit_download"`
+	SpeedLimitDownload int64 `mapstructure:"speed_limit_download"`
 	// Global upload speed limit in KB/s.
-	SpeedLimitUpload int64 `yaml:"speed_limit_upload"`
+	SpeedLimitUpload int64 `mapstructure:"speed_limit_upload"`
 	// Start torrent automatically if it was running when previous session was closed.
-	ResumeOnStartup bool `yaml:"resume_on_startup"`
+	ResumeOnStartup bool `mapstructure:"resume_on_startup"`
 	// Check each torrent loop for aliveness. Helps to detect bugs earlier.
-	HealthCheckInterval time.Duration `yaml:"health_check_interval"`
+	HealthCheckInterval time.Duration `mapstructure:"health_check_interval"`
 	// If torrent loop is stuck for more than this duration. Program crashes with stacktrace.
-	HealthCheckTimeout time.Duration `yaml:"health_check_timeout"`
+	HealthCheckTimeout time.Duration `mapstructure:"health_check_timeout"`
 	// The unix permission of created files, execute bit is removed for files.
 	// Effective only when default storage provider is used.
-	FilePermissions fs.FileMode `yaml:"file_permissions"`
+	FilePermissions fs.FileMode `mapstructure:"file_permissions"`
 
-  // Number of peer addresses to request in announce request.
-	TrackerNumWant int `yaml:"tracker_num_want"`
-  // Time to wait for announcing stopped event.
+	// Number of peer addresses to request in announce request.
+	TrackerNumWant int `mapstructure:"tracker_num_want"`
+	// Time to wait for announcing stopped event.
 	// Stopped event is sent to the tracker when torrent is stopped.
-	TrackerStopTimeout time.Duration `yaml:"tracker_stop_timeout"`
+	TrackerStopTimeout time.Duration `mapstructure:"tracker_stop_timeout"`
 	// When the client needs new peer addresses to connect, it ask to the tracker.
 	// To prevent spamming the tracker an interval is set to wait before the next announce.
-	TrackerMinAnnounceInterval time.Duration `yaml:"tracker_min_announce_interval"`
+	TrackerMinAnnounceInterval time.Duration `mapstructure:"tracker_min_announce_interval"`
 	// Total time to wait for response to be read.
 	// This includes ConnectTimeout and TLSHandshakeTimeout.
-	TrackerHTTPTimeout time.Duration `yaml:"tracker_http_timeout"`
+	TrackerHTTPTimeout time.Duration `mapstructure:"tracker_http_timeout"`
 	// User agent sent when communicating with HTTP trackers.
 	// Only applies to private torrents.
-	TrackerHTTPPrivateUserAgent string `yaml:"tracker_http_private_user_agent"`
+	TrackerHTTPPrivateUserAgent string `mapstructure:"tracker_http_private_user_agent"`
 	// Max number of bytes in a tracker response.
-	TrackerHTTPMaxResponseSize uint `yaml:"tracker_http_max_response_size"`
+	TrackerHTTPMaxResponseSize uint `mapstructure:"tracker_http_max_response_size"`
 	// Check and validate TLS ceritificates.
-	TrackerHTTPVerifyTLS bool `yaml:"tracker_http_verify_tls"`
+	TrackerHTTPVerifyTLS bool `mapstructure:"tracker_http_verify_tls"`
 }
 
 var DefaultConfig = Config{
@@ -91,8 +91,8 @@ var DefaultConfig = Config{
 	MaxOpenFiles:                           10240,
 	PEXEnabled:                             true,
 	ResumeWriteInterval:                    30 * time.Second,
-	PrivatePeerIDPrefix:                    "-RN" + Version + "-",
-	PrivateExtensionHandshakeClientVersion: "Rain " + Version,
+	PrivatePeerIDPrefix:                    "-ZB" + Version + "-",
+	PrivateExtensionHandshakeClientVersion: "zbittorrent " + Version,
 	BlocklistUpdateInterval:                24 * time.Hour,
 	BlocklistUpdateTimeout:                 10 * time.Minute,
 	BlocklistEnabledForTrackers:            true,
@@ -101,13 +101,13 @@ var DefaultConfig = Config{
 	BlocklistMaxResponseSize:               100 << 20,
 	// TorrentAddHTTPTimeout:                  30 * time.Second,
 	// MaxMetadataSize:                        30 << 20,
-	MaxTorrentSize:                         10 << 20,
+	MaxTorrentSize: 10 << 20,
 	// MaxPieces:                              64 << 10,
-	DNSResolveTimeout:                      5 * time.Second,
-	ResumeOnStartup:                        true,
-	HealthCheckInterval:                    10 * time.Second,
-	HealthCheckTimeout:                     60 * time.Second,
-	FilePermissions:                        0o750,
+	DNSResolveTimeout:   5 * time.Second,
+	ResumeOnStartup:     true,
+	HealthCheckInterval: 10 * time.Second,
+	HealthCheckTimeout:  60 * time.Second,
+	FilePermissions:     0o750,
 
 	// RPC Server
 	// RPCEnabled:         true,
@@ -120,7 +120,7 @@ var DefaultConfig = Config{
 	TrackerStopTimeout:          5 * time.Second,
 	TrackerMinAnnounceInterval:  time.Minute,
 	TrackerHTTPTimeout:          10 * time.Second,
-	TrackerHTTPPrivateUserAgent: "Rain/" + Version,
+	TrackerHTTPPrivateUserAgent: "ZB/" + Version,
 	TrackerHTTPMaxResponseSize:  2 << 20,
 	TrackerHTTPVerifyTLS:        true,
 
