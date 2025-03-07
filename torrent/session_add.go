@@ -39,11 +39,16 @@ func (s *Session) addTorrent(r io.Reader, opts *AddTorrentOptions) (*Torrent, er
 		return nil, err
 	}
 
-  id, port, err := s.initTorrent(opts)
-  if err != nil {
-    return nil, err
-  }
+	id, port, err := s.initTorrent(opts)
+	if err != nil {
+		return nil, err
+	}
 
+	defer func() {
+		if err != nil {
+			s.releasePort(port)
+		}
+	}()
 
 	t, err := newTorrent(
 		s,
@@ -52,7 +57,7 @@ func (s *Session) addTorrent(r io.Reader, opts *AddTorrentOptions) (*Torrent, er
 		mi.Info.Hash[:],
 		&mi.Info,
 		mi.Info.Name,
-    port,
+		port,
 		s.parseTrackers(mi.AnnounceList, mi.Info.Private),
 		s.log,
 	)
@@ -62,9 +67,9 @@ func (s *Session) addTorrent(r io.Reader, opts *AddTorrentOptions) (*Torrent, er
 	}
 
 	defer func() {
-	  if err != nil {
-	    t.Close()
-	  }
+		if err != nil {
+			t.Close()
+		}
 	}()
 
 	t2 := s.insertTorrent(t)
@@ -115,42 +120,42 @@ func (s *Session) insertTorrent(t *torrent) *Torrent {
 }
 
 func (s *Session) initTorrent(opts *AddTorrentOptions) (id string, port int, err error) {
-  port, err = s.getPort()
-  if err != nil {
-    return
-  }
+	port, err = s.getPort()
+	if err != nil {
+		return
+	}
 
-  defer func() {
-    if err != nil {
-      s.releasePort(port)
-    }
-  }()
+	defer func() {
+		if err != nil {
+			s.releasePort(port)
+		}
+	}()
 
-  var givenID string
-  if opts.ID != "" {
-    givenID = opts.ID
-  }
-  
-  if givenID != "" {
-    s.mTorrents.Lock()
-    defer s.mTorrents.Unlock()
-    if _, ok := s.torrents[givenID]; ok {
-      err = errors.New("duplicate torrent id")
-      return
-    }
-    id = givenID
-  } else {
-    u, err2 := uuid.NewV1()
-    if err2 != nil {
-      err = err2
-      return
-    }
-    id = base64.RawURLEncoding.EncodeToString(u[:])
-  }
+	var givenID string
+	if opts.ID != "" {
+		givenID = opts.ID
+	}
 
-  if err != nil {
-    return
-  }
+	if givenID != "" {
+		s.mTorrents.Lock()
+		defer s.mTorrents.Unlock()
+		if _, ok := s.torrents[givenID]; ok {
+			err = errors.New("duplicate torrent id")
+			return
+		}
+		id = givenID
+	} else {
+		u, err2 := uuid.NewV1()
+		if err2 != nil {
+			err = err2
+			return
+		}
+		id = base64.RawURLEncoding.EncodeToString(u[:])
+	}
 
-  return
+	if err != nil {
+		return
+	}
+
+	return
 }
