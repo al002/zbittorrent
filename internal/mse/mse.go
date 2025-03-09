@@ -224,6 +224,18 @@ func (s *Stream) HandshakeOutgoing(sKey []byte, cryptoProvide CryptoMethod, init
 	// Step 5 | A->B: ENCRYPT2(Payload Stream)
 }
 
+// HandshakeIncoming initiates MSE handshake for incoming stream.
+//
+// getSKey must return the correct stream identifier for given sKeyHash.
+// sKeyHash can be calculated with mse.HashSKey function.
+// If there is no matching sKeyHash in your application, you must return nil.
+//
+// cryptoSelect is a function that takes provided methods as a bitfield and returns the selected crypto method.
+// Function may return zero value that means none of the provided methods are selected and handshake fails.
+//
+// payloadIn is a buffer for writing initial payload that is coming along with the handshake from the initiator of the handshake.
+// If initial payload does not fit into payloadIn, handshake returns io.ErrShortBuffer.
+// If this function returns an error, handshake fails.
 func (s *Stream) HandshakeIncoming(
 	getSKey func(sKeyHash [20]byte) (sKey []byte),
 	cryptoSelect func(provided CryptoMethod) (selected CryptoMethod),
