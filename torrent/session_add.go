@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/al002/zbittorrent/internal/metainfo"
+	"github.com/al002/zbittorrent/internal/storage"
 	"github.com/al002/zbittorrent/internal/tracker"
 	"github.com/gofrs/uuid"
 )
@@ -39,7 +40,7 @@ func (s *Session) addTorrent(r io.Reader, opts *AddTorrentOptions) (*Torrent, er
 		return nil, err
 	}
 
-	id, port, err := s.initTorrent(opts)
+	id, port, sto, err := s.initTorrent(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +60,7 @@ func (s *Session) addTorrent(r io.Reader, opts *AddTorrentOptions) (*Torrent, er
 		mi.Info.Name,
 		port,
 		s.parseTrackers(mi.AnnounceList, mi.Info.Private),
+    sto,
 		s.log,
 	)
 
@@ -119,7 +121,7 @@ func (s *Session) insertTorrent(t *torrent) *Torrent {
 	return t2
 }
 
-func (s *Session) initTorrent(opts *AddTorrentOptions) (id string, port int, err error) {
+func (s *Session) initTorrent(opts *AddTorrentOptions) (id string, port int, sto storage.Storage, err error) {
 	port, err = s.getPort()
 	if err != nil {
 		return
@@ -153,6 +155,7 @@ func (s *Session) initTorrent(opts *AddTorrentOptions) (id string, port int, err
 		id = base64.RawURLEncoding.EncodeToString(u[:])
 	}
 
+  sto, err = s.storage.GetStorage(id)
 	if err != nil {
 		return
 	}

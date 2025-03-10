@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/al002/zbittorrent/internal/acceptor"
+	"github.com/al002/zbittorrent/internal/allocator"
 	"github.com/al002/zbittorrent/internal/announcer"
 	"github.com/al002/zbittorrent/internal/tracker"
 )
@@ -79,4 +80,13 @@ func (t *torrent) startAcceptor() {
     t.acceptor = acceptor.New(listener, t.incomingConnC, t.log)
     go t.acceptor.Run()
 	}
+}
+
+func (t *torrent) startAllocator() {
+  if t.allocator != nil {
+    t.crash("allocator exists")
+  }
+
+  t.allocator = allocator.New()
+  go t.allocator.Run(t.info, t.storage, t.allocatorProgressC, t.allocatorResultC)
 }

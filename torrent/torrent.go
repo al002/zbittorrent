@@ -7,9 +7,12 @@ import (
 	"time"
 
 	"github.com/al002/zbittorrent/internal/acceptor"
+	"github.com/al002/zbittorrent/internal/allocator"
 	"github.com/al002/zbittorrent/internal/announcer"
 	"github.com/al002/zbittorrent/internal/log"
 	"github.com/al002/zbittorrent/internal/metainfo"
+	"github.com/al002/zbittorrent/internal/mse"
+	"github.com/al002/zbittorrent/internal/storage"
 	"github.com/al002/zbittorrent/internal/tracker"
 )
 
@@ -54,10 +57,21 @@ type torrent struct {
 	// A signal sent to run() loop when announcers are stopped
 	announcersStoppedC chan struct{}
 
+	// Special hash of info hash for encypted connection handshake.
+	sKeyHash [20]byte
 	// Listen for incoming peer connection
 	acceptor *acceptor.Acceptor
 	// New raw connections created by OutgoingHandshaker
 	incomingConnC chan net.Conn
+
+	// implementation to save the files in torrent
+	storage storage.Storage
+
+	// A worker that opens and allocates files on the disk
+	allocator          *allocator.Allocator
+	allocatorProgressC chan allocator.Progress
+	allocatorResultC   chan *allocator.Allocator
+	bytesAllocated     int64
 
 	log log.Logger
 }
@@ -71,6 +85,7 @@ func newTorrent(
 	name string,
 	port int,
 	trackers []tracker.Tracker,
+	sto storage.Storage,
 	l log.Logger,
 ) (*torrent, error) {
 	if len(infoHash) != 20 {
@@ -88,6 +103,7 @@ func newTorrent(
 		info:                info,
 		trackers:            trackers,
 		name:                name,
+		port:                port,
 		completeC:           make(chan struct{}),
 		closeC:              make(chan struct{}),
 		doneC:               make(chan struct{}),
@@ -98,9 +114,15 @@ func newTorrent(
 		announceCommandC:    make(chan struct{}),
 		announcersStoppedC:  make(chan struct{}),
 
+		sKeyHash:      mse.HashSKey(ih[:]),
 		incomingConnC: make(chan net.Conn),
 		peerIDs:       make(map[[20]byte]struct{}),
-		log:           l,
+
+		storage:            sto,
+		allocatorProgressC: make(chan allocator.Progress),
+		allocatorResultC:   make(chan *allocator.Allocator),
+
+		log: l,
 	}
 
 	n := t.copyPeerIDPrefix()

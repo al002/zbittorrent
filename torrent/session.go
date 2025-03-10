@@ -7,13 +7,15 @@ import (
 
 	"github.com/al002/zbittorrent/internal/blocklist"
 	"github.com/al002/zbittorrent/internal/log"
+	"github.com/al002/zbittorrent/internal/storage"
 	"github.com/al002/zbittorrent/internal/trackermanager"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/time/rate"
 )
 
 type Session struct {
-	config Config
+	config  Config
+	storage storage.Provider
 
 	trackerManager  *trackermanager.TrackerManager
 	log             log.Logger
@@ -61,6 +63,7 @@ func NewSession(cfg Config, logger log.Logger) (*Session, error) {
 	c := &Session{
 		config:         cfg,
 		log:            logger,
+		storage:        newFileStorageProvider(&cfg),
 		blocklist:      bl,
 		trackerManager: trackermanager.New(blTracker, cfg.DNSResolveTimeout, !cfg.TrackerHTTPVerifyTLS, logger),
 		torrents:       make(map[string]*Torrent),
@@ -108,18 +111,18 @@ func (s *Session) getTrackerUserAgent(private bool) string {
 }
 
 func (s *Session) getPort() (int, error) {
-  s.mPorts.Lock()
-  defer s.mPorts.Unlock()
-  for p := range s.availablePorts {
-    delete(s.availablePorts, p)
-    return p, nil
-  }
+	s.mPorts.Lock()
+	defer s.mPorts.Unlock()
+	for p := range s.availablePorts {
+		delete(s.availablePorts, p)
+		return p, nil
+	}
 
-  return 0, errors.New("no free port")
+	return 0, errors.New("no free port")
 }
 
 func (s *Session) releasePort(port int) {
-  s.mPorts.Lock()
-  defer s.mPorts.Unlock()
-  s.availablePorts[port] = struct{}{}
+	s.mPorts.Lock()
+	defer s.mPorts.Unlock()
+	s.availablePorts[port] = struct{}{}
 }
