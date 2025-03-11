@@ -9,23 +9,25 @@ import (
 
 	"github.com/al002/zbittorrent/internal/blocklist"
 	"github.com/al002/zbittorrent/internal/log"
+	"github.com/al002/zbittorrent/internal/resumer/boltdbresumer"
 	"github.com/al002/zbittorrent/internal/storage"
 	"github.com/al002/zbittorrent/internal/trackermanager"
 	"github.com/mitchellh/go-homedir"
 	"go.etcd.io/bbolt"
+	berrors "go.etcd.io/bbolt/errors"
 	"golang.org/x/time/rate"
-  berrors "go.etcd.io/bbolt/errors"
 )
 
 var (
-  sessionBucket = []byte("session")
-  torrentsBucket = []byte("torrents")
+	sessionBucket  = []byte("session")
+	torrentsBucket = []byte("torrents")
 )
 
 type Session struct {
 	config  Config
-  db *bbolt.DB
+	db      *bbolt.DB
 	storage storage.Provider
+	resumer *boltdbresumer.Resumer
 
 	trackerManager  *trackermanager.TrackerManager
 	log             log.Logger
@@ -54,59 +56,64 @@ func NewSession(cfg Config, logger log.Logger) (*Session, error) {
 	// }
 
 	var err error
-  cfg.Database, err = homedir.Expand(cfg.Database)
-  if err != nil {
-    return nil, err
-  }
+	cfg.Database, err = homedir.Expand(cfg.Database)
+	if err != nil {
+		return nil, err
+	}
 
 	cfg.DataDir, err = homedir.Expand(cfg.DataDir)
 	if err != nil {
 		return nil, err
 	}
 
-  err = os.MkdirAll(filepath.Dir(cfg.Database), os.ModeDir|cfg.FilePermissions)
-  if err != nil {
-    return nil, err
-  }
+	err = os.MkdirAll(filepath.Dir(cfg.Database), os.ModeDir|cfg.FilePermissions)
+	if err != nil {
+		return nil, err
+	}
 
-  db, err := bbolt.Open(cfg.Database, cfg.FilePermissions&^0111, &bbolt.Options{
-    Timeout: time.Second,
-  })
+	db, err := bbolt.Open(cfg.Database, cfg.FilePermissions&^0111, &bbolt.Options{
+		Timeout: time.Second,
+	})
 
-  if err == berrors.ErrTimeout {
-    return nil, errors.New("resume database is locked by another process")
-  } else if err != nil {
-    return nil, err
-  }
+	if err == berrors.ErrTimeout {
+		return nil, errors.New("resume database is locked by another process")
+	} else if err != nil {
+		return nil, err
+	}
 
-  defer func() {
-    if err != nil {
-      db.Close()
-    }
-  }()
-  
-  // existing torrents id
-  var ids []string
-  err = db.Update(func(tx *bbolt.Tx) error {
-    _, err2 := tx.CreateBucketIfNotExists(sessionBucket)
-    if err2 != nil {
-      return err2
-    }
+	defer func() {
+		if err != nil {
+			db.Close()
+		}
+	}()
 
-    b, err2 := tx.CreateBucketIfNotExists(torrentsBucket)
-    if err2 != nil {
-      return err2
-    }
+	// existing torrents id
+	var ids []string
+	err = db.Update(func(tx *bbolt.Tx) error {
+		_, err2 := tx.CreateBucketIfNotExists(sessionBucket)
+		if err2 != nil {
+			return err2
+		}
 
-    return b.ForEach(func(k, _ []byte) error {
-      ids = append(ids, string(k))
-      return nil
-    })
-  })
+		b, err2 := tx.CreateBucketIfNotExists(torrentsBucket)
+		if err2 != nil {
+			return err2
+		}
 
-  if err != nil {
-    return nil, err
-  }
+		return b.ForEach(func(k, _ []byte) error {
+			ids = append(ids, string(k))
+			return nil
+		})
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	resumer, err := boltdbresumer.New(db, torrentsBucket)
+	if err != nil {
+		return nil, err
+	}
 
 	ports := make(map[int]struct{})
 	for p := cfg.PortBegin; p < cfg.PortEnd; p++ {
@@ -122,6 +129,8 @@ func NewSession(cfg Config, logger log.Logger) (*Session, error) {
 	c := &Session{
 		config:         cfg,
 		log:            logger,
+		db:             db,
+		resumer:        resumer,
 		storage:        newFileStorageProvider(&cfg),
 		blocklist:      bl,
 		trackerManager: trackermanager.New(blTracker, cfg.DNSResolveTimeout, !cfg.TrackerHTTPVerifyTLS, logger),

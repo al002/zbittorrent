@@ -26,6 +26,7 @@ type Info struct {
 	Hash        [20]byte
 	Length      int64
 	NumPieces   uint32
+  Bytes []byte
 	Private     bool
 	Files       []File
 	Raw         []byte
@@ -97,7 +98,6 @@ func NewInfo(b []byte, utf8 bool, pad bool) (*Info, error) {
 	}
 
 	numPieces := len(it.Pieces) / sha1.Size
-
 	if numPieces == 0 {
 		return nil, errZeroPieces
 	}
@@ -142,6 +142,8 @@ func NewInfo(b []byte, utf8 bool, pad bool) (*Info, error) {
   if err != nil{
     return nil, err
   }
+
+  i.Bytes = b
 
 	return &i, nil
 }

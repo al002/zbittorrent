@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/al002/zbittorrent/internal/metainfo"
+	"github.com/al002/zbittorrent/internal/resumer/boltdbresumer"
 	"github.com/al002/zbittorrent/internal/storage"
 	"github.com/al002/zbittorrent/internal/tracker"
 	"github.com/gofrs/uuid"
@@ -14,6 +15,9 @@ import (
 
 type AddTorrentOptions struct {
 	ID string
+
+	StopAfterDownload bool
+	StopAfterMetadata bool
 }
 
 func (s *Session) AddTorrent(r io.Reader, opts *AddTorrentOptions) (*Torrent, error) {
@@ -60,7 +64,7 @@ func (s *Session) addTorrent(r io.Reader, opts *AddTorrentOptions) (*Torrent, er
 		mi.Info.Name,
 		port,
 		s.parseTrackers(mi.AnnounceList, mi.Info.Private),
-    sto,
+		sto,
 		s.log,
 	)
 
@@ -73,6 +77,23 @@ func (s *Session) addTorrent(r io.Reader, opts *AddTorrentOptions) (*Torrent, er
 			t.Close()
 		}
 	}()
+
+	rspec := &boltdbresumer.Spec{
+		InfoHash:          mi.Info.Hash[:],
+		Port:              port,
+		Name:              mi.Info.Name,
+		Trackers:          mi.AnnounceList,
+		URLList:           mi.URLList,
+		Info:              mi.Info.Bytes,
+		AddedAt:           t.addedAt,
+		StopAfterDownload: opts.StopAfterDownload,
+		StopAfterMetadata: opts.StopAfterMetadata,
+	}
+
+	err = s.resumer.Write(id, rspec)
+	if err != nil {
+		return nil, err
+	}
 
 	t2 := s.insertTorrent(t)
 
@@ -155,7 +176,7 @@ func (s *Session) initTorrent(opts *AddTorrentOptions) (id string, port int, sto
 		id = base64.RawURLEncoding.EncodeToString(u[:])
 	}
 
-  sto, err = s.storage.GetStorage(id)
+	sto, err = s.storage.GetStorage(id)
 	if err != nil {
 		return
 	}
